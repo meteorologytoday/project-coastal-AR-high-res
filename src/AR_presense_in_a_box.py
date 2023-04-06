@@ -3,8 +3,22 @@ import numpy as np
 import load_data
 import pandas as pd
 
+import argparse
 
-def computeARPresense(IVT, ARobj_map, area, region_idx):
+parser = argparse.ArgumentParser(
+                    prog = 'plot_skill',
+                    description = 'Plot prediction skill of GFS on AR.',
+)
+
+parser.add_argument('--lat', type=float, nargs=2, help='Latitudes in degree', required=True)
+parser.add_argument('--lon', type=float, nargs=2, help='Longitudes in degree', required=True)
+parser.add_argument('--year-rng', type=int, nargs=2, help='Year range.', required=True)
+parser.add_argument('--output-file', type=str, help='Output dir', default="")
+args = parser.parse_args()
+print(args)
+
+
+def computeARPresense(IVT, IWV, ARobj_map, area, region_idx):
 
     if np.sum(region_idx) == 0:
 
@@ -13,31 +27,55 @@ def computeARPresense(IVT, ARobj_map, area, region_idx):
     ARidx = (ARobj_map > 0) & region_idx
 
     sum_area = np.sum(area[region_idx])
+    sum_ARobj_area = np.sum(area[ARidx])
+
     AR_presense = np.sum(area[ARidx]) / sum_area
-    mean_IVT  = np.sum(area[ARidx] * IVT[ARidx]) / sum_area
+
+    mean_IVT = np.sum(area[region_idx] * IVT[region_idx]) / sum_area
+    mean_IWV = np.sum(area[region_idx] * IWV[region_idx]) / sum_area
+
+    if sum_ARobj_area == 0:
+        mean_IVT_in_ARobj = 0.0
+        mean_IWV_in_ARobj = 0.0
+    else:
+        mean_IVT_in_ARobj = np.sum(area[ARidx] * IVT[ARidx]) / sum_ARobj_area
+        mean_IWV_in_ARobj = np.sum(area[ARidx] * IWV[ARidx]) / sum_ARobj_area
+    
 
     return dict(
         AR_presense = AR_presense,
         mean_IVT     = mean_IVT,
+        mean_IVT_in_ARobj = mean_IVT_in_ARobj,
+        mean_IWV     = mean_IWV,
+        mean_IWV_in_ARobj = mean_IWV_in_ARobj,
     )
 
 
-output_filename = "test.nc"
+output_filename = "output.nc"
 
-lat_n = 43.0
-lat_s = 31.0
-lon_w = -130.0 % 360
-lon_e = -120.0 % 360
+args.lon = np.array(args.lon) % 360.0
 
-dts = pd.date_range('2015-01-01', '2019-12-31', freq="D", inclusive="both")
+
+lat_n, lat_s = np.amax(args.lat), np.amin(args.lat)
+lon_w, lon_e = np.amin(args.lon), np.amax(args.lon)
+
+print("Latitude  box: %.2f %.2f" % (lat_s, lat_n))
+print("Longitude box: %.2f %.2f" % (lon_w, lon_e))
+
+
+dts = pd.date_range('%04d-10-01' % (args.year_rng[0]-1,), '%04d-03-31' % (args.year_rng[1],), freq="D", inclusive="both")
 
 empty_sample = np.zeros((len(dts),))
+empty_sample[:] = np.nan
 
 ds = xr.Dataset(
 
     data_vars=dict(
         AR_presense = (["time", ], empty_sample.copy()),
         mean_IVT    = (["time", ], empty_sample.copy()),
+        mean_IVT_in_ARobj = (["time", ], empty_sample.copy()),
+        mean_IWV    = (["time", ], empty_sample.copy()),
+        mean_IWV_in_ARobj = (["time", ], empty_sample.copy()),
     ),
 
     coords=dict(
@@ -53,12 +91,21 @@ area = None
 for i, dt in enumerate(dts):
    
     print("Doing date: %s" % (dt.strftime("%Y-%m-%d"),)) 
+
+    if dt.month in [4, 5, 6, 7, 8, 9]:
+        print("Skip this date.")
+        continue
+
     _data = dict()
 
     for  dsname, varname, savename, opts in [
         ("ERA5", "IVT", None, dict()),
+        ("ERA5", "IWV", None, dict()),
         ("ERA5_ARobj", "map", None, dict(method="ANOM_LEN")),
     ]:
+
+        
+        
         info = load_data.getFileAndIndex(product=dsname, date=dt, varname=varname, **opts)
 
         if savename is None:
@@ -86,27 +133,23 @@ for i, dt in enumerate(dts):
 
         region_idx = (llat >= lat_s) & (llat <= lat_n) & (llon >= lon_w) & (llon <= lon_e)
 
-    result = computeARPresense(_data["IVT"].to_numpy(), _data["map"].to_numpy(), area, region_idx)
+    result = computeARPresense(_data["IVT"].to_numpy(), _data["IWV"].to_numpy(), _data["map"].to_numpy(), area, region_idx)
 
 
-    ds.AR_presense[i] = result["AR_presense"] 
-    ds.mean_IVT[i]    = result["mean_IVT"]
+    ds.AR_presense[i]       = result["AR_presense"] 
+    ds.mean_IVT[i]          = result["mean_IVT"]
+    ds.mean_IVT_in_ARobj[i] = result["mean_IVT_in_ARobj"]
+    ds.mean_IWV[i]          = result["mean_IWV"]
+    ds.mean_IWV_in_ARobj[i] = result["mean_IWV_in_ARobj"]
+
+
+
+print("Output filename: ", args.output_file)
 
 
 ds.to_netcdf(
-    output_filename,
+    args.output_file,
     unlimited_dims=["time",],
     encoding={'time': {'dtype': 'i4'}},
 )
-
-
-# Load IVT field
-# Load AR obj
-
-
-# Do AR existence
-# Do Mean IVT
-
-
-# Output data
 
