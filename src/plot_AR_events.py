@@ -70,9 +70,19 @@ for dt in dts:
     
     for varname in ["sst", "u10", "v10", "t2m", "IWV", "IVT", "mtpr"]:
         info = load_data.getFileAndIndex(product="ERA5", date=dt, varname=varname)
-        _data.append(xr.load_dataset(info['filename']))
-    
-    _data = xr.merge(_data)
+        _data.append(xr.load_dataset(info['filename'])[varname])
+        _time = _data[-1].coords["time"]
+ 
+    for varname in ["map",]:
+        info = load_data.getFileAndIndex(product="ERA5_ARobj", date=dt, varname=varname, method="ANOM_LEN")
+
+        # these two datasets do not have a uniform time for the same day
+        _tmp = xr.load_dataset(info['filename'])[varname]
+        _tmp = _tmp.assign_coords(time=_time)
+        
+        _data.append(_tmp)
+ 
+    _data = xr.merge(_data).isel(time=0)
 
     cent_lon = 180.0
 
@@ -114,20 +124,36 @@ for dt in dts:
     fig.suptitle(dt.strftime("%Y-%m-%d"))
 
     _ax = ax[0, 0]
-    mappable = _ax.contourf(coords["lon"], coords["lat"], _data.IVT.isel(time=0), levels=np.linspace(0, 600, 13), transform=proj_norm, extend="max", cmap="GnBu")
+    mappable = _ax.contourf(coords["lon"], coords["lat"], _data.IVT, levels=np.linspace(0, 600, 13), transform=proj_norm, extend="max", cmap="GnBu")
     
-    _ax.quiver(coords["lon"], coords["lat"], _data.u10.isel(time=0).to_numpy(), _data.v10.isel(time=0).to_numpy(), scale=200, transform=proj_norm)
+    _ax.quiver(coords["lon"], coords["lat"], _data.u10.to_numpy(), _data.v10.to_numpy(), scale=200, transform=proj_norm)
+ 
+    cs = _ax.contourf(coords["lon"], coords["lat"], _data['map'], colors='none', levels=[0, 0.5, np.inf], hatches=[None, "."], transform=proj_norm)
+
+    # Remove the contour lines for hatches 
+    for _, collection in enumerate(cs.collections):
+        collection.set_edgecolor("red")
      
     cax = tool_fig_config.addAxesNextToAxes(fig, _ax, "right", thickness=0.03, spacing=0.05)
     cb = plt.colorbar(mappable, cax=cax, orientation="vertical", pad=0.0)
     cb.ax.set_ylabel(" IVT [ $ \\mathrm{kg} \\, / \\, \\mathrm{m} \\, / \\, \\mathrm{s} $ ]")
  
     _ax = ax[0, 1]
-    mappable = _ax.contourf(coords["lon"], coords["lat"], _data.sst.isel(time=0) - 273.15, levels=np.linspace(10, 20, 21), transform=proj_norm, extend="both", cmap="rainbow")
-    
+    mappable = _ax.contourf(coords["lon"], coords["lat"], _data.sst - 273.15, levels=np.linspace(10, 20, 21), transform=proj_norm, extend="both", cmap="rainbow")
+   
+    print(np.nanmean(_data.mtpr * 86400.0)) 
+    cs = _ax.contourf(coords["lon"], coords["lat"], _data.mtpr * 86400.0, colors='none', levels=[0, 10, 2e5], hatches=[None, "//"], transform=proj_norm)
+
+    # Remove the contour lines for hatches 
+    for _, collection in enumerate(cs.collections):
+        collection.set_edgecolor("yellow")
+        #collection.set_linewidth(0.)
+
+
     cax = tool_fig_config.addAxesNextToAxes(fig, _ax, "right", thickness=0.03, spacing=0.05)
     cb = plt.colorbar(mappable, cax=cax, orientation="vertical", pad=0.0)
     cb.ax.set_ylabel(" SST [ $ \\mathrm{C} $ ]")
+    
            
     for __ax in ax.flatten(): 
 
