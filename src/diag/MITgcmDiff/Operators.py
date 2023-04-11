@@ -21,7 +21,7 @@ def shift(a, shift, axis, boundary='periodic', fill_value = 0.0, **kwargs):
         elif shift < 0:
             indexing[axis] = slice(a.shape[axis] - ( - shift ), a.shape[axis])
 
-        print(indexing) 
+        #print(indexing) 
         _a[tuple(indexing)] = fill_value
 
     else:
@@ -59,9 +59,9 @@ def T_DIVy_V(fi, coo: MITgcmDiff.Coordinate, weighted = True, boundary='fill'):
 def T_DIVz_W(fi, coo: MITgcmDiff.Coordinate, weighted = True, boundary='fill'):
 
     if weighted:
-        fo = ( shift(fi, -1, axis=0, boundary=boundary) - fi ) / coo.grid["DVOLT"]
+        fo = ( fi - shift(fi, -1, axis=0, boundary=boundary) ) / coo.grid["DVOLT"]
     else:
-        fo = ( shift(fi, -1, axis=0, boundary=boundary) - fi ) / coo.grid["DRF"]
+        fo = ( fi - shift(fi, -1, axis=0, boundary=boundary) ) / coo.grid["DRF"]
 
 
     return fo

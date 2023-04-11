@@ -16,4 +16,10 @@ class Coordinate:
         self.grid["RAC_slab"] = self.grid["RAC"].reshape((1, self.Ny, self.Nx))
         self.grid["DVOLT"] = self.grid["DRF"] * self.grid["RAC_slab"]
 
+        print("RF shape: ", self.grid["RF"].shape)
+
+        print("DVOLT dimension: ", self.grid["DVOLT"].shape)
+        print("DVOLT: ")
+        print((self.grid["DVOLT"]).sum())
+
 

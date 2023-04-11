@@ -66,17 +66,28 @@ def loadCoordinateFromFolder(dirname, nlev=None, region=None):
             "hFacC",
             "hFacW",
             "RC",
-            "DRC",
+            "DRF",
         ]:
 
             data[varname] = data[varname][0:nlev, :, :]
 
         for varname in [
             "RF",
-            "DRF",
         ]:
 
             data[varname] = data[varname][0:nlev+1, :, :]
+
+        for varname in [
+            "DRC",
+        ]:
+
+            data[varname] = data[varname][0:nlev-1, :, :]
+
+
+
+    for varname in ["DRF", "DRC", "RF", "RC"]:
+        
+        data[varname] = data[varname][:, 0, 0][:, None, None]
 
 
     return Coordinate(data)
