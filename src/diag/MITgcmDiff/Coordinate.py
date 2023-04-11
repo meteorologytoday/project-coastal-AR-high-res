@@ -1,5 +1,5 @@
 
-class MITgcmCoordinate:
+class Coordinate:
 
     def __init__(self, grid):
 

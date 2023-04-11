@@ -1,6 +1,5 @@
 import numpy as np
-import mitgcm_helper
-from MITgcmCoordinate import *
+import MITgcmDiff.Coordinate
 
 def shift(a, shift, axis, boundary='periodic', fill_value = 0.0, **kwargs):
 
@@ -33,7 +32,7 @@ def shift(a, shift, axis, boundary='periodic', fill_value = 0.0, **kwargs):
 # Convention follows
 #https://mitgcm.readthedocs.io/en/latest/outp_pkgs/outp_pkgs.html#mitgcm-kernel-available-diagnostics-list
 
-def T_DIVx_U(fi, coo: MITgcmCoordinate, weighted = True, boundary='fill'):
+def T_DIVx_U(fi, coo: MITgcmDiff.Coordinate, weighted = True, boundary='fill'):
 
     if weighted:    
         fo = ( shift(fi, -1, axis=2, boundary=boundary) - fi ) / coo.grid["DVOLT"]
@@ -45,7 +44,7 @@ def T_DIVx_U(fi, coo: MITgcmCoordinate, weighted = True, boundary='fill'):
     return fo
 
 
-def T_DIVy_V(fi, coo: MITgcmCoordinate, weighted = True, boundary='fill'):
+def T_DIVy_V(fi, coo: MITgcmDiff.Coordinate, weighted = True, boundary='fill'):
 
     if weighted:    
         fo = ( shift(fi, -1, axis=1, boundary=boundary) - fi ) / coo.grid["DVOLT"]
@@ -57,12 +56,12 @@ def T_DIVy_V(fi, coo: MITgcmCoordinate, weighted = True, boundary='fill'):
     return fo
 
 
-def T_DIVz_W(fi, coo: MITgcmCoordinate, weighted = True, boundary='fill'):
+def T_DIVz_W(fi, coo: MITgcmDiff.Coordinate, weighted = True, boundary='fill'):
 
     if weighted:
-        fo = ( shift(fi, -1, axis=0) - fi, boundary=boundary ) / coo.grid["DVOLT"]
+        fo = ( shift(fi, -1, axis=0, boundary=boundary) - fi ) / coo.grid["DVOLT"]
     else:
-        fo = ( shift(fi, -1, axis=0) - fi, boundary=boundary ) / coo.grid["DRF"]
+        fo = ( shift(fi, -1, axis=0, boundary=boundary) - fi ) / coo.grid["DRF"]
 
 
     return fo
