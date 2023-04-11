@@ -6,6 +6,9 @@ from MITgcmutils import mds
 import MITgcmDiff.loadFunctions as lf
 import numpy as np
 
+ρ   = 1027.5
+c_p = 3994.0
+
 data_dir = "/data/SO2/SWOT/MARA/RUN4_LY/TEST_TFLUX/" ; iters=150336;
 grid_dir = "/data/SO2/SWOT/GRID/BIN"
 
@@ -35,9 +38,13 @@ lat = coo.grid["YC"][:, 0]
 lon = coo.grid["XC"][0, :]
 
 
-bundle = mds.rdmds("%s/diag_state" % (data_dir,), iters, region=region, lev=lev, returnmeta=True)
+print("Loading data")
 
-data = lf.postprocessRdmds(bundle)
+data = dict()
+for k in ["diag_state", "diag_Tbdgt", "diag_2D", ]:
+    print("Loading file of ", k)
+    bundle = mds.rdmds("%s/diag_state" % (data_dir,), iters, region=region, lev=lev, returnmeta=True)
+    data[k] = lf.postprocessRdmds(bundle)
 
 print("Loading Matplotlib...")
 
