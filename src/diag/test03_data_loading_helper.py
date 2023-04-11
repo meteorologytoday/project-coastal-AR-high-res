@@ -1,43 +1,49 @@
-import MITgcmDiff.loadFunctions
-import MITgcmDiff.Operators as op 
-import xarray as xr
-import MITgcmDiff.utils as ut
-from MITgcmutils import mds
-import MITgcmDiff.loadFunctions as lf
 import numpy as np
+import data_loading_helper as dlh
+import pandas as pd
 
-
-data_dir = "/data/SO2/SWOT/MARA/RUN4_LY/TEST_TFLUX/" ; iters=150336;
+data_dir = "/data/SO2/SWOT/MARA/RUN4_LY/DIAGS_DLY"
 grid_dir = "/data/SO2/SWOT/GRID/BIN"
 
-nlev = 90
-lev = list(range(nlev))
+test_dt    = pd.Timestamp('2017-01-06')
 
-print("Loading coordinate skeleton")
-skeleton = MITgcmDiff.loadFunctions.loadSkeletonFromFolder(grid_dir, nlev=nlev)
+msm = dlh.MITgcmSimMetadata('2015-01-01', 150.0, data_dir, grid_dir)
+
+inverted_iters = dlh.getItersFromDate(test_dt,        msm)
+inverted_date = dlh.getDateFromIters(inverted_iters, msm)
+inverted_inverted_iters = dlh.getItersFromDate( inverted_date, msm )
+    
+print("Test date: ", test_dt)
+print("inverted_iters: ", inverted_iters)
+print("inverted_date: ", inverted_date)
+print("inverted_inverted_iters: ", inverted_iters)
+
+if inverted_iters == inverted_inverted_iters and test_dt == inverted_date:
+    
+    print("Date and iters are consistent.")
+    
+else:
+ 
+    raise Exception("Iteration inversion is not consistent. inverted_iters = %d, inverted_inverted_iters = %d" % (inverted_iters, inverted_inverted_iters))
 
 lat_rng = [31.0, 43.0]
 lon_rng = [230.0, 244.0] #360 .- [130.0, 116.0
-#lon_rng = [235.0, 236.0] #360 .- [130.0, 116.0
 
-print("nlev : %d" % (nlev,))
-print("Lat range: ", lat_rng)
-print("Lon range: ", lon_rng)
+lat_rng = [35.0, 37.0]
+lon_rng = [235.0, 237] #360 .- [130.0, 116.0
+nlev = 10
 
-region = ut.findRegion_latlon(
-    skeleton["YC"][:, 0], lat_rng,
-    skeleton["XC"][0, :], lon_rng,
-)
+coo, reg_kwargs = dlh.loadSkeleton(msm, nlev, lat_rng, lon_rng)
 
-print("Loading coordinate")
-coo = MITgcmDiff.loadFunctions.loadCoordinateFromFolder(grid_dir, nlev=nlev, region=region)
+
+print("Start loading data...")
+data = dlh.loadDataByDate(test_dt, msm, **reg_kwargs)
+print("Data loaded.")
+
+# Start plotting stuff
 
 lat = coo.grid["YC"][:, 0]
 lon = coo.grid["XC"][0, :]
-
-
-bundle = mds.rdmds("%s/diag_state" % (data_dir,), iters, region=region, lev=lev, returnmeta=True)
-data = lf.postprocessRdmds(bundle)
 
 print("Loading Matplotlib...")
 
@@ -90,7 +96,7 @@ fig, ax = plt.subplots(
 )
 
 _ax = ax[0, 0]
-mappable = _ax.contourf(lon, lat, data["THETA"][0, :, :], levels=np.linspace(15, 25, 51), transform=proj_norm, extend="max", cmap="rainbow")
+mappable = _ax.contourf(lon, lat, data["THETA"][0, :, :], levels=np.linspace(10, 20, 51), transform=proj_norm, extend="max", cmap="rainbow")
  
 cax = tool_fig_config.addAxesNextToAxes(fig, _ax, "right", thickness=0.03, spacing=0.05)
 cb = plt.colorbar(mappable, cax=cax, orientation="vertical", pad=0.0)
