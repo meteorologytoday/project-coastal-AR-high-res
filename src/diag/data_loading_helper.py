@@ -41,22 +41,6 @@ def getDateFromIters(iters, msm : MITgcmSimMetadata):
 
 
 
-def loadSkeleton(msm : MITgcmSimMetadata, nlev : int, lat_rng, lon_rng):
-    
-    skeleton = MITgcmDiff.loadFunctions.loadSkeletonFromFolder(msm.grid_dir, nlev=nlev)
-    
-    region = ut.findRegion_latlon(
-        skeleton["YC"][:, 0], lat_rng,
-        skeleton["XC"][0, :], lon_rng,
-    )
-
-    coo = MITgcmDiff.loadFunctions.loadCoordinateFromFolder(msm.grid_dir, nlev=nlev, region=region)
-
-    lev = list(range(nlev))
-    
-    return coo, dict(region=region, lev=lev)
-
-   
 def loadDataByDate(dt, msm : MITgcmSimMetadata, region=None, lev=()):
     
     data = dict()

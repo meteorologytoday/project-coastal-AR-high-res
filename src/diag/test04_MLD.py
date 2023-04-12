@@ -1,48 +1,39 @@
 import numpy as np
 import data_loading_helper as dlh
-import pandas as pd
 import MITgcmDiff.loadFunctions as lf
-
+import pandas as pd
+import MITgcmDiff.mixed_layer_tools as mlt
+from MITgcmDiff.buoyancy_linear import TS2rho
 data_dir = "/data/SO2/SWOT/MARA/RUN4_LY/DIAGS_DLY"
 grid_dir = "/data/SO2/SWOT/GRID/BIN"
 
 test_dt    = pd.Timestamp('2017-01-06')
-
 msm = dlh.MITgcmSimMetadata('2015-01-01', 150.0, data_dir, grid_dir)
-
-inverted_iters = dlh.getItersFromDate(test_dt,        msm)
-inverted_date = dlh.getDateFromIters(inverted_iters, msm)
-inverted_inverted_iters = dlh.getItersFromDate( inverted_date, msm )
-    
+   
 print("Test date: ", test_dt)
-print("inverted_iters: ", inverted_iters)
-print("inverted_date: ", inverted_date)
-print("inverted_inverted_iters: ", inverted_iters)
-
-if inverted_iters == inverted_inverted_iters and test_dt == inverted_date:
-    
-    print("Date and iters are consistent.")
-    
-else:
- 
-    raise Exception("Iteration inversion is not consistent. inverted_iters = %d, inverted_inverted_iters = %d" % (inverted_iters, inverted_inverted_iters))
 
 lat_rng = [31.0, 43.0]
 lon_rng = [230.0, 244.0] #360 .- [130.0, 116.0
 
-lat_rng = [35.0, 37.0]
-lon_rng = [235.0, 237] #360 .- [130.0, 116.0
-nlev = 10
-
-
-
+#lat_rng = [35.0, 37.0]
+##lon_rng = [235.0, 237] #360 .- [130.0, 116.0
+nlev = 90
 
 print("Start loading data...")
 coo, crop_kwargs = lf.loadCoordinateFromFolderAndWithRange(msm.grid_dir, nlev=nlev, lat_rng=lat_rng, lon_rng=lon_rng)
 data = dlh.loadDataByDate(test_dt, msm, **crop_kwargs)
 print("Data loaded.")
 
+
+#print(coo.grid["Depth"])
+#print(coo.grid["Nz_bot"])
 # Start plotting stuff
+#print(coo.grid["RF"])
+MLD = mlt.findMLD_drhodz(data["DRHODR"], coo.grid["RF"].flatten(), mask=coo.grid["maskInC"], Nz_bot=coo.grid["Nz_bot"])
+
+
+rho = TS2rho(data["THETA"], data["SALT"])
+MLD_threshold = mlt.findMLD_rho(rho, coo.grid["RC"].flatten(), mask=coo.grid["maskInC"], Nz_bot=coo.grid["Nz_bot"])
 
 lat = coo.grid["YC"][:, 0]
 lon = coo.grid["XC"][0, :]
@@ -65,6 +56,19 @@ import tool_fig_config
 
 print("done")
 
+fig, ax = plt.subplots(1, 1)
+
+ax.plot(data["DRHODR"][:, 5, 5], coo.grid["RF"].flatten()[:-1])
+
+
+plt.show()
+
+
+
+
+
+
+
 cent_lon = 180.0
 
 plot_lon_l = 360 - 130.0
@@ -84,12 +88,12 @@ figsize, gridspec_kw = tool_fig_config.calFigParams(
     w_right = 1.5,
     h_bottom = 1.0,
     h_top = 1.0,
-    ncol = 1,
-    nrow = 1,
+    ncol = 2,
+    nrow = 2,
 )
 
 fig, ax = plt.subplots(
-    1, 1,
+    2, 2,
     figsize=figsize,
     subplot_kw=dict(projection=proj, aspect="auto"),
     gridspec_kw=gridspec_kw,
@@ -97,14 +101,40 @@ fig, ax = plt.subplots(
     squeeze=False,
 )
 
+fig.suptitle("Date: %s" % (test_dt.strftime("%Y-%m-%d")))
+
 _ax = ax[0, 0]
-mappable = _ax.contourf(lon, lat, data["THETA"][0, :, :], levels=np.linspace(10, 20, 51), transform=proj_norm, extend="max", cmap="rainbow")
+mappable = _ax.contourf(lon, lat, coo.grid["Depth"], levels=np.linspace(0, 6000, 601), transform=proj_norm, extend="max", cmap="rainbow")
+cax = tool_fig_config.addAxesNextToAxes(fig, _ax, "right", thickness=0.03, spacing=0.05)
+cb = plt.colorbar(mappable, cax=cax, orientation="vertical", pad=0.0)
+cb.ax.set_ylabel(" Depth [ $ \\mathrm{m} $ ]")
+
+_ax = ax[0, 1]
+mappable = _ax.contourf(lon, lat, coo.grid["Nz_bot"], levels=np.linspace(0, 90, 91), transform=proj_norm, extend="max", cmap="rainbow")
  
 cax = tool_fig_config.addAxesNextToAxes(fig, _ax, "right", thickness=0.03, spacing=0.05)
 cb = plt.colorbar(mappable, cax=cax, orientation="vertical", pad=0.0)
-cb.ax.set_ylabel(" SST [ $ \\mathrm{C} $ ]")
+cb.ax.set_ylabel(" Nz_bot ")
 
-       
+_ax = ax[1, 0]
+mappable = _ax.contourf(lon, lat, MLD, levels=np.linspace(0, 200, 21), transform=proj_norm, extend="max", cmap="rainbow")
+ 
+cax = tool_fig_config.addAxesNextToAxes(fig, _ax, "right", thickness=0.03, spacing=0.05)
+cb = plt.colorbar(mappable, cax=cax, orientation="vertical", pad=0.0)
+cb.ax.set_ylabel("MLD [$\\mathrm{m}$]")
+
+
+_ax = ax[1, 1]
+mappable = _ax.contourf(lon, lat, MLD_threshold, levels=np.linspace(0, 200, 21), transform=proj_norm, extend="max", cmap="rainbow")
+ 
+cax = tool_fig_config.addAxesNextToAxes(fig, _ax, "right", thickness=0.03, spacing=0.05)
+cb = plt.colorbar(mappable, cax=cax, orientation="vertical", pad=0.0)
+cb.ax.set_ylabel("MLD [$\\mathrm{m}$]")
+
+
+
+
+
 for __ax in ax.flatten(): 
 
     __ax.set_global()

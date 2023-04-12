@@ -1,7 +1,7 @@
 from MITgcmutils import mds
 import MITgcmDiff.Operators as Operators
 from MITgcmDiff.Coordinate import Coordinate
-
+import MITgcmDiff.utils as ut
 def genDataDictionary(data, metadata):
 
     
@@ -30,6 +30,22 @@ def postprocessRdmds(bundle):
    
     return genDataDictionary(data, metadata) 
 
+def loadCoordinateFromFolderAndWithRange(dirname, nlev=None, lat_rng=None, lon_rng=None):
+
+
+    _coo = loadCoordinateFromFolder(dirname, nlev=nlev)
+ 
+    region = ut.findRegion_latlon(
+        _coo.grid["YC"][:, 0], lat_rng,
+        _coo.grid["XC"][0, :], lon_rng,
+    )
+
+    print("Region: ", region)
+ 
+     
+    coo = loadCoordinateFromFolder(dirname, nlev=nlev, region=region)
+   
+    return coo, dict(lev=list(range(nlev)), region=region)
 
 def loadCoordinateFromFolder(dirname, nlev=None, region=None):
     
@@ -55,9 +71,28 @@ def loadCoordinateFromFolder(dirname, nlev=None, region=None):
         "maskInW",
         "hFacC",
         "hFacW",
+        "Depth",
     ]:
 
-        data[varname] = mds.rdmds("%s/%s" % (dirname, varname,), region=region)
+        data[varname] = mds.rdmds("%s/%s" % (dirname, varname,))
+
+    Ny, Nx = data["DXC"].shape
+    Nz, _, _ = data["RC"].shape
+    print("(Nz, Ny, Nx) = (%d, %d, %d)" % (Nz, Ny, Nx,))
+
+    if region is not None:
+        for k, v in data.items():
+            vs = v.shape
+            if len(vs) == 3 and vs[1] == Ny and vs[2] == Nx:
+                data[k] = v[:, region[2]:region[3], region[0]:region[1]]
+            elif len(vs) == 2:
+                data[k] = v[region[2]:region[3], region[0]:region[1]]
+
+        print("Update shape.")
+        Ny, Nx = data["DXC"].shape
+        Nz, _, _ = data["RC"].shape
+        print("(Nz, Ny, Nx) = (%d, %d, %d)" % (Nz, Ny, Nx,))
+
 
 
     if nlev is not None:
@@ -85,13 +120,13 @@ def loadCoordinateFromFolder(dirname, nlev=None, region=None):
 
 
 
-    for varname in ["DRF", "DRC", "RF", "RC"]:
-        
-        data[varname] = data[varname][:, 0, 0][:, None, None]
+    #for varname in ["DRF", "DRC", "RF", "RC"]:
+    #    data[varname] = data[varname][:, 0, 0][:, None, None]
 
 
     return Coordinate(data)
 
+"""
 def loadSkeletonFromFolder(dirname, nlev=None):
     
     data = dict()
@@ -102,6 +137,8 @@ def loadSkeletonFromFolder(dirname, nlev=None):
         "YC",
         "RF",
         "RC",
+        "DRF",
+        "DRC",
         "maskInC",
         "maskInS",
         "maskInW",
@@ -125,9 +162,12 @@ def loadSkeletonFromFolder(dirname, nlev=None):
             data[varname] = data[varname][0:nlev+1, :, :]
 
 
+    for varname in ["DRF", "DRC", "RF", "RC"]:
+        data[varname] = data[varname][:, 0, 0][:, None, None]
+
     return data
 
-
+"""
 
 
 if __name__ == "__main__":

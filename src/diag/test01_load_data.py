@@ -13,9 +13,6 @@ grid_dir = "/data/SO2/SWOT/GRID/BIN"
 nlev = 90
 lev = list(range(nlev))
 
-print("Loading coordinate skeleton")
-skeleton = MITgcmDiff.loadFunctions.loadSkeletonFromFolder(grid_dir, nlev=nlev)
-
 lat_rng = [31.0, 43.0]
 lon_rng = [230.0, 244.0] #360 .- [130.0, 116.0
 #lon_rng = [235.0, 236.0] #360 .- [130.0, 116.0
@@ -24,19 +21,14 @@ print("nlev : %d" % (nlev,))
 print("Lat range: ", lat_rng)
 print("Lon range: ", lon_rng)
 
-region = ut.findRegion_latlon(
-    skeleton["YC"][:, 0], lat_rng,
-    skeleton["XC"][0, :], lon_rng,
-)
-
 print("Loading coordinate")
-coo = MITgcmDiff.loadFunctions.loadCoordinateFromFolder(grid_dir, nlev=nlev, region=region)
+coo, crop_kwargs = MITgcmDiff.loadFunctions.loadCoordinateFromFolderAndWithRange(grid_dir, nlev=nlev, lat_rng=lat_rng, lon_rng=lon_rng)
 
 lat = coo.grid["YC"][:, 0]
 lon = coo.grid["XC"][0, :]
 
 
-bundle = mds.rdmds("%s/diag_state" % (data_dir,), iters, region=region, lev=lev, returnmeta=True)
+bundle = mds.rdmds("%s/diag_state" % (data_dir,), iters, **crop_kwargs, returnmeta=True)
 data = lf.postprocessRdmds(bundle)
 
 print("Loading Matplotlib...")

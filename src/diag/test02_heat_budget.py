@@ -16,9 +16,6 @@ grid_dir = "/data/SO2/SWOT/GRID/BIN"
 nlev = 90
 lev = list(range(nlev))
 
-print("Loading coordinate skeleton")
-skeleton = MITgcmDiff.loadFunctions.loadSkeletonFromFolder(grid_dir, nlev=nlev)
-
 lat_rng = [31.0, 43.0]
 lon_rng = [230.0, 244.0] #360 .- [130.0, 116.0
 #lon_rng = [235.0, 236.0] #360 .- [130.0, 116.0
@@ -27,13 +24,8 @@ print("nlev : %d" % (nlev,))
 print("Lat range: ", lat_rng)
 print("Lon range: ", lon_rng)
 
-region = ut.findRegion_latlon(
-    skeleton["YC"][:, 0], lat_rng,
-    skeleton["XC"][0, :], lon_rng,
-)
-
 print("Loading coordinate")
-coo = MITgcmDiff.loadFunctions.loadCoordinateFromFolder(grid_dir, nlev=nlev, region=region)
+coo, crop_kwargs = MITgcmDiff.loadFunctions.loadCoordinateFromFolderAndWithRange(grid_dir, nlev=nlev, lat_rng=lat_rng, lon_rng=lon_rng)
 
 lat = coo.grid["YC"][:, 0]
 lon = coo.grid["XC"][0, :]
@@ -44,7 +36,7 @@ print("Loading data")
 data = dict()
 for k in ["diag_state", "diag_Tbdgt",]:
     print("Loading file of ", k)
-    bundle = mds.rdmds("%s/%s" % (data_dir, k,), iters, region=region, lev=lev, returnmeta=True)
+    bundle = mds.rdmds("%s/%s" % (data_dir, k,), iters, **crop_kwargs, returnmeta=True)
     _data = lf.postprocessRdmds(bundle)
 
     for varname, vardata in _data.items():
@@ -52,7 +44,7 @@ for k in ["diag_state", "diag_Tbdgt",]:
 
 for k in ["diag_2D", ]:
     print("Loading file of ", k)
-    bundle = mds.rdmds("%s/%s" % (data_dir, k,), iters, region=region, returnmeta=True)
+    bundle = mds.rdmds("%s/%s" % (data_dir, k,), iters, region=crop_kwargs["region"], returnmeta=True)
     _data = lf.postprocessRdmds(bundle)
 
     for varname, vardata in _data.items():
