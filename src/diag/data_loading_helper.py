@@ -4,7 +4,6 @@ import MITgcmDiff.utils as ut
 from MITgcmutils import mds
 import MITgcmDiff.loadFunctions as lf
 import MITgcmDiff.xarrayCoversion as xac
-import MITgcmDiff.calHeatBudget as chb
 import numpy as np
 import pandas as pd
 
@@ -41,27 +40,36 @@ def getDateFromIters(iters, msm : MITgcmSimMetadata):
 
 
 
-def loadDataByDate(dt, msm : MITgcmSimMetadata, region=None, lev=()):
+def loadDataByDate(dt, msm : MITgcmSimMetadata, region=None, lev=(), merge=True, datasets=[]):
     
     data = dict()
 
     iters = getItersFromDate(dt, msm)
     
-    for k in ["diag_state", "diag_Tbdgt",]:
+    for k in datasets:
+        
         print("Loading file of ", k)
-        bundle = mds.rdmds("%s/%s" % (msm.data_dir, k,), iters, region=region, lev=lev, returnmeta=True)
+
+
+        kwargs = dict(
+            region=region,
+            returnmeta=True,
+        )
+
+        if k in ["diag_state", "diag_Tbdgt"]:
+            kwargs["lev"] = lev
+
+        bundle = mds.rdmds("%s/%s" % (msm.data_dir, k,), iters, **kwargs)
         _data = lf.postprocessRdmds(bundle)
 
-        for varname, vardata in _data.items():
-            data[varname] = vardata
 
-    for k in ["diag_2D", ]:
-        print("Loading file of ", k)
-        bundle = mds.rdmds("%s/%s" % (msm.data_dir, k,), iters, region=region, returnmeta=True)
-        _data = lf.postprocessRdmds(bundle)
+        if merge:
+            for varname, vardata in _data.items():
+                data[varname] = vardata
 
-        for varname, vardata in _data.items():
-            data[varname] = vardata
+        else:
+            data[k] = _data
+
 
     return data
 

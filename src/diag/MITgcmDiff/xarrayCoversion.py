@@ -48,7 +48,6 @@ def mkDataset(dict_dimarr, coo):
             x_l = (["Y", "X_l"], coo.grid["XG"]),
             y_l = (["Y_l", "X"], coo.grid["YG"]),
             z_l = (["Z_l"],      coo.grid["RF"][:-1, 0, 0]),
-
         ),
     )
 

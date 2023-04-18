@@ -41,10 +41,12 @@ def loadCoordinateFromFolderAndWithRange(dirname, nlev=None, lat_rng=None, lon_r
     )
 
     print("Region: ", region)
- 
-     
+
     coo = loadCoordinateFromFolder(dirname, nlev=nlev, region=region)
-   
+  
+    if nlev is None:
+        nlev = len(coo.grid["RC"])
+ 
     return coo, dict(lev=list(range(nlev)), region=region)
 
 def loadCoordinateFromFolder(dirname, nlev=None, region=None):

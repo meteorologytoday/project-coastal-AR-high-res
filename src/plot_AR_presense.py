@@ -10,6 +10,7 @@ parser = argparse.ArgumentParser(
 )
 
 parser.add_argument('--input', type=str, help='Input file', required=True)
+parser.add_argument('--wateryears', type=int, nargs='+', help='Wateryears', required=True)
 args = parser.parse_args()
 print(args)
 
@@ -26,10 +27,10 @@ from matplotlib import dates
 print("Done")
 
 
-plotting_wateryears = list(range(2016, 2019+1))
+plotting_wateryears = args.wateryears
 
 
-fig, ax = plt.subplots(3, 1, figsize=(6, 6), gridspec_kw=dict(hspace=.2))
+fig, ax = plt.subplots(3, 1, figsize=(6, 6), gridspec_kw=dict(hspace=.3))
 
 fig.suptitle(args.input)
 
