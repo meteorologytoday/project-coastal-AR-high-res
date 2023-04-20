@@ -10,16 +10,21 @@ mitgcm_beg_date="2015-01-01"
 mitgcm_deltaT=150.0
 nproc=16
 
-python3 diag_budgets.py \
-    --data-dir $data_dir \
-    --grid-dir $grid_dir \
-    --mitgcm-beg-date $mitgcm_beg_date \
-    --mitgcm-deltaT $mitgcm_deltaT \
-    --beg-date $beg_date \
-    --end-date $end_date \
-    --nproc $nproc \
-    --output-dir $output_dir
 
+for tracer in salt heat ; do
 
+    echo "Now diagnose tracer: $tracer"
+    
+    _output_dir=$output_dir/$tracer
 
+    python3 diag_${tracer}_budgets.py \
+        --data-dir $data_dir \
+        --grid-dir $grid_dir \
+        --mitgcm-beg-date $mitgcm_beg_date \
+        --mitgcm-deltaT $mitgcm_deltaT \
+        --beg-date $beg_date \
+        --end-date $end_date \
+        --nproc $nproc \
+        --output-dir $_output_dir
 
+done

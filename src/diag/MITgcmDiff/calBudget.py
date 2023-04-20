@@ -25,11 +25,29 @@ def computeHeatTendency(
 
     _d["TOTTTEND"] = d["TOTTTEND"] / 86400.0
 
-    _d["SWFLX"]  = - cvt2Dto3D(d["oceQsw"], coo)              * Qsw_shape(coo.grid["RF"][:-1])
-    _d["SFCFLX"] = - cvt2Dto3D(d["TFLUX"] - d["oceQsw"], coo) * SFCFLX_shape(coo.grid["RF"][:-1])
-    _d["WTHMASS_masked"] = d["WTHMASS"] * SFCFLX_shape(coo.grid["RF"][:-1])
+    # oceQnet = EXFls + EXFlh - (EXFlwnet + EXFswnet)
+    # oceQsw = - EXFswnet
 
+    # EXFqnet = - oceQnet = EXFlwnet + EXFswnet - EXFlh - EXFhs
+    # TFLUX = surForcT + oceQsw + oceFreez + [PmEpR*SST]*Cp
+    # oceFWflx = [PmEpR]
+
+    # In our case where sea ice does not involve
+    # TFLUX = oceQsw + EXFhl + EXFhs - EXFlwnet + [PmEpR*SST]*Cp
+    #                                                  |
+    #                                                  +--> the loss/gain of ocean mass * c_p
+
+    _d["SWFLX"]  = - cvt2Dto3D(d["oceQsw"], coo)              * Qsw_shape(coo.grid["RF"][:-1])
+
+    _d["SFCFLX"] = - cvt2Dto3D(d["TFLUX"] - d["oceQsw"], coo) * SFCFLX_shape(coo.grid["RF"][:-1])
+    #fwfflx = d["TFLUX"] - ( d["oceQsw"] + d["EXFhl"] + d["EXFhs"] - d["EXFlwnet"] )
+
+    #_d["LWFLX"]  = - cvt2Dto3D(- d["EXFlwnet"], coo) * SFCFLX_shape(coo.grid["RF"][:-1])
+    #_d["SENFLX"] = - cvt2Dto3D(d["EXFhs"], coo) * SFCFLX_shape(coo.grid["RF"][:-1])
+    #_d["LATFLX"] = - cvt2Dto3D(d["EXFhl"], coo) * SFCFLX_shape(coo.grid["RF"][:-1])
+    #_d["FWFFLX"] = - cvt2Dto3D(fwfflx, coo) * SFCFLX_shape(coo.grid["RF"][:-1])
     
+    _d["WTHMASS_masked"] = d["WTHMASS"] * SFCFLX_shape(coo.grid["RF"][:-1])
 
     print("Shape of mask")
     print(_d["WTHMASS_masked"].shape)
@@ -61,6 +79,10 @@ def computeHeatTendency(
     )
 
     _d["TEND_SWFLX"]  = - op.T_DIVz_W(_d["SWFLX"], coo, weighted=False)  / (rhoConst * c_p)
+    #_d["TEND_LWFLX"] = - op.T_DIVz_W(_d["LWFLX"], coo, weighted=False)   / (rhoConst * c_p)
+    #_d["TEND_LATFLX"] = - op.T_DIVz_W(_d["LATFLX"], coo, weighted=False) / (rhoConst * c_p)
+    #_d["TEND_SENFLX"] = - op.T_DIVz_W(_d["SENFLX"], coo, weighted=False) / (rhoConst * c_p)
+    #_d["TEND_FWFFLX"] = - op.T_DIVz_W(_d["FWFFLX"], coo, weighted=False) / (rhoConst * c_p)
     _d["TEND_SFCFLX"] = - op.T_DIVz_W(_d["SFCFLX"], coo, weighted=False) / (rhoConst * c_p)
     _d["TEND_SFC_WTHMASS"] = - op.T_DIVz_W(_d["WTHMASS_masked"], coo, weighted=False)
 
@@ -223,7 +245,9 @@ def computeSaltTendency(
            op.T_DIVz_W(d["DFrI_SLT"], coo, weighted=True)
     )
 
+    
     _d["TEND_SFCFLX"] = - op.T_DIVz_W(_d["SFCFLX"], coo, weighted=False) / rhoConst
+    
     _d["TEND_SFC_WSLTMASS"] = - op.T_DIVz_W(_d["WSLTMASS_masked"], coo, weighted=False)
 
     _d["TEND_SUM"] = (

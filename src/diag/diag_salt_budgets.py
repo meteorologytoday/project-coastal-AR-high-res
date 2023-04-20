@@ -70,7 +70,7 @@ def work(dt, output_filename):
 
         data_snp1 = dlh.loadDataByDate(dt - pd.Timedelta(days=1), msm, **crop_kwargs, datasets=["diag_snaps",])
         data_snp2 = dlh.loadDataByDate(dt, msm, **crop_kwargs, datasets=["diag_snaps",])
-        data_ave  = dlh.loadDataByDate(dt, msm, **crop_kwargs, datasets=["diag_Tbdgt", "diag_2D", "diag_state",])
+        data_ave  = dlh.loadDataByDate(dt, msm, **crop_kwargs, datasets=["diag_Sbdgt", "diag_2D", "diag_state",])
 
         print("[%s] Data loaded." % (datestr,)) 
        
@@ -82,38 +82,37 @@ def work(dt, output_filename):
         MLD2_threshold = mlt.findMLD_rho(rho2, z_T, mask=mask, Nz_bot=coo.grid["Nz_bot"])
 
 
-        print("[%s] Compute heat budget..." % (datestr,)) 
-        ds = cb.computeHeatTendency(data_ave, coo, return_xarray = True)
+        print("[%s] Compute salt budget..." % (datestr,)) 
+        ds = cb.computeSaltTendency(data_ave, coo, return_xarray = True)
 
 
         print("[%s] Compute ML heat budget..." % (datestr,))
         data = dict()
         for varnameA, varnameB in [
-            ("G_ttl",   "TOTTTEND"),
+            ("G_ttl",   "TOTSTEND"),
             ("G_adv",   "TEND_ADV"),
             ("G_vdiff", "TEND_DIFFz"),
-            ("G_sw",    "TEND_SWFLX"),
-            ("G_nsw",   "TEND_SFCFLX"),
-            ("G_fwf",   "TEND_SFC_WTHMASS"),
+            ("G_sfc",   "TEND_SFCFLX"),
+            ("G_fwf",   "TEND_SFC_WSLTMASS"),
         ]:
             print("Var: ", varnameA)
             data[varnameA] = mlt.computeMLMean(ds[varnameB].to_numpy(), MLD2_threshold, z_W, mask=mask, fill_value=np.nan)
 
-        MLT1 = mlt.computeMLMean(data_snp1["THETA"], MLD1_threshold, z_W, mask=mask, fill_value=np.nan)
-        MLT2 = mlt.computeMLMean(data_snp2["THETA"], MLD2_threshold, z_W, mask=mask, fill_value=np.nan)
-        data["dMLTdt"] = (MLT2 - MLT1) / 86400.0
+        MLS1 = mlt.computeMLMean(data_snp1["SALT"], MLD1_threshold, z_W, mask=mask, fill_value=np.nan)
+        MLS2 = mlt.computeMLMean(data_snp2["SALT"], MLD2_threshold, z_W, mask=mask, fill_value=np.nan)
+        data["dMLSdt"] = (MLS2 - MLS1) / 86400.0
 
         data["G_ent"] = (
-              mlt.computeMLMean(data_snp1["THETA"], MLD2_threshold, z_W, mask=mask, fill_value=np.nan)  
-            - mlt.computeMLMean(data_snp1["THETA"], MLD1_threshold, z_W, mask=mask, fill_value=np.nan)  
+              mlt.computeMLMean(data_snp1["SALT"], MLD2_threshold, z_W, mask=mask, fill_value=np.nan)  
+            - mlt.computeMLMean(data_snp1["SALT"], MLD1_threshold, z_W, mask=mask, fill_value=np.nan)  
         ) / 86400.0
 
         data["dMLDdt"] = (MLD2_threshold - MLD1_threshold) / 86400.0
         data["MLD"]    = (MLD1_threshold + MLD2_threshold) / 2.0
-        data["MLT"]    = (MLT1 + MLT2) / 2.0
+        data["MLS"]    = (MLS1 + MLS2) / 2.0
         data["G_adv_fwf"] = data["G_adv"] + data["G_fwf"]
         
-        data["SST"] = data_ave["THETA"][1, :, :]
+        data["SSS"] = data_ave["SALT"][1, :, :]
 
         xr_data = []
         for _varname, _data in data.items():
@@ -157,7 +156,7 @@ with Pool(processes=args.nproc) as pool:
     for i, dt in enumerate(dts):
         
         dtstr = dt.strftime("%Y-%m-%d")
-        output_filename = "%s/budget_analysis_%s.nc" % (args.output_dir, dts[i].strftime("%Y-%m-%d"))
+        output_filename = "%s/salt_budget_analysis_%s.nc" % (args.output_dir, dts[i].strftime("%Y-%m-%d"))
 
         if os.path.exists(output_filename):
             print("[%s] File %s already exists. Do not do this job." % (dtstr, output_filename))
